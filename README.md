@@ -6,6 +6,14 @@ A customizable, real-time financial dashboard built with **Next.js 14**, featuri
 
 ---
 
+## 🎥 Demo Video
+
+[![Watch Demo Video](https://img.shields.io/badge/▶️_Watch_Demo-Google_Drive-4285F4?style=for-the-badge&logo=googledrive)](https://drive.google.com/file/d/1qIXez8txU2gTN24xsdZYC3tLrKDvX3CX/view?usp=drive_link)
+
+**[Click here to watch the full demo →](https://drive.google.com/file/d/1qIXez8txU2gTN24xsdZYC3tLrKDvX3CX/view?usp=drive_link)**
+
+---
+
 ## 🎯 Project Overview
 
 FinBoard is a **widget-based financial dashboard** that allows users to create, customize, and arrange different types of data visualizations (charts, tables, cards) using live stock market APIs. Built with modern React patterns and optimized for performance.
