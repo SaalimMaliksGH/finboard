@@ -1,8 +1,6 @@
 'use client';
-import { useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { processTableData } from '@/lib/dataExtractor';
-import { useWidgetData } from '@/lib/useWidgetData';
-import { usePagination, extractTableHeaders } from '@/lib/usePagination';
 
 export default function StockTableWidget({ 
   id,
@@ -15,33 +13,123 @@ export default function StockTableWidget({
   onDelete,
   onRefresh 
 }) {
-  // Use custom hook for data fetching
-  const { data, loading, error, lastUpdated, refetch } = useWidgetData({
-    apiUrl,
-    apiKey,
-    initialData,
-    processData: (fetchedData) => processTableData(fetchedData, fields),
-    processDeps: [fields]
-  });
+  const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [lastUpdated, setLastUpdated] = useState(null);
 
-  // Use custom hook for pagination
-  const {
-    paginatedData,
-    currentPage,
-    totalPages,
-    goToNextPage,
-    goToPrevPage,
-    hasNextPage,
-    hasPrevPage
-  } = usePagination(data, 7);
+  const hasFetchedOnce = useRef(false);
+  const abortControllerRef = useRef(null);
+  const ROWS_PER_PAGE = 7;
+
+  const FINAL_API_KEY = useMemo(() => apiKey || process.env.NEXT_PUBLIC_API_KEY || '', [apiKey]);
+
+  const loadData = async () => {
+    if (!apiUrl) {
+      setError('No API URL provided');
+      setLoading(false);
+      return;
+    }
+
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      abortControllerRef.current = new AbortController();
+      
+      const headers = {};
+      if (FINAL_API_KEY) {
+        headers['x-api-key'] = FINAL_API_KEY;
+      }
+      
+      const response = await fetch(apiUrl, { 
+        headers,
+        signal: abortControllerRef.current.signal
+      });
+
+      if (!response.ok) {
+        if (response.status === 429) throw new Error("Rate Limit Exceeded");
+        throw new Error(`API Error: ${response.status}`);
+      }
+
+      const fetchedData = await response.json();
+      const tableData = processTableData(fetchedData, fields);
+      
+      setData(tableData);
+      setLastUpdated(new Date().toLocaleTimeString('en-US', { hour12: false }));
+      setLoading(false);
+      hasFetchedOnce.current = true;
+    } catch (err) {
+      if (err.name === 'AbortError') return;
+      console.error("Table fetch error:", err);
+      setError(err.message);
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (hasFetchedOnce.current) return;
+
+    if (initialData) {
+      try {
+        const tableData = processTableData(initialData, fields);
+        setData(tableData);
+        setLastUpdated(new Date().toLocaleTimeString('en-US', { hour12: false }));
+        setLoading(false);
+        hasFetchedOnce.current = true;
+      } catch (err) {
+        console.error("Error processing cached data:", err);
+        setError(err.message);
+        setLoading(false);
+      }
+    } else if (apiUrl) {
+      loadData();
+    }
+
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialData, apiUrl]);
 
   const handleManualRefresh = () => {
-    refetch();
+    setError(null);
+    loadData();
     if (onRefresh) onRefresh();
   };
 
-  // Extract all unique headers from data
-  const allHeaders = useMemo(() => extractTableHeaders(data), [data]);
+  // Pagination logic
+  const totalPages = Math.ceil(data.length / ROWS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ROWS_PER_PAGE;
+  const endIndex = startIndex + ROWS_PER_PAGE;
+  const paginatedData = data.slice(startIndex, endIndex);
+
+  const handlePrevPage = () => {
+    setCurrentPage(prev => Math.max(prev - 1, 1));
+  };
+
+  const handleNextPage = () => {
+    setCurrentPage(prev => Math.min(prev + 1, totalPages));
+  };
+
+  // Get all unique keys from all data items to create headers
+  const allHeaders = useMemo(() => {
+    if (!data || data.length === 0) return [];
+    const headerSet = new Set();
+    data.forEach(item => {
+      if (typeof item === 'object' && item !== null) {
+        Object.keys(item).forEach(key => headerSet.add(key));
+      }
+    });
+    return Array.from(headerSet);
+  }, [data]);
 
   return (
     <div className="h-full w-full flex flex-col bg-slate-900 text-white rounded-lg shadow-lg border border-slate-700 hover:border-emerald-500/50 transition-all">
@@ -130,10 +218,10 @@ export default function StockTableWidget({
         <div className="px-4 py-2 border-t border-slate-700 bg-slate-800/30 rounded-b-lg flex justify-between items-center h-10 flex-shrink-0">
           <div className="flex items-center gap-2">
             <button
-              onClick={goToPrevPage}
-              disabled={!hasPrevPage}
+              onClick={handlePrevPage}
+              disabled={currentPage === 1}
               className={`px-2 py-1 text-xs rounded ${
-                !hasPrevPage
+                currentPage === 1
                   ? 'text-gray-600 cursor-not-allowed'
                   : 'text-gray-400 hover:text-white hover:bg-slate-700'
               }`}
@@ -141,13 +229,13 @@ export default function StockTableWidget({
               ← Prev
             </button>
             <span className="text-[10px] text-gray-500 font-mono">
-              Page {currentPage} of {totalPages} ({data?.length || 0} rows)
+              Page {currentPage} of {totalPages} ({data.length} rows)
             </span>
             <button
-              onClick={goToNextPage}
-              disabled={!hasNextPage}
+              onClick={handleNextPage}
+              disabled={currentPage === totalPages}
               className={`px-2 py-1 text-xs rounded ${
-                !hasNextPage
+                currentPage === totalPages
                   ? 'text-gray-600 cursor-not-allowed'
                   : 'text-gray-400 hover:text-white hover:bg-slate-700'
               }`}

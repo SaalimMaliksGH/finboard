@@ -1,4 +1,5 @@
 'use client';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { Line } from 'react-chartjs-2';
 import { 
   Chart as ChartJS, 
@@ -12,7 +13,6 @@ import {
   Filler 
 } from 'chart.js';
 import { processChartData } from '@/lib/dataExtractor';
-import { useWidgetData } from '@/lib/useWidgetData';
 
 ChartJS.register(
   CategoryScale, 
@@ -36,17 +36,91 @@ export default function StockChartWidget({
   onDelete,
   onRefresh
 }) {
-  // Use custom hook for data fetching
-  const { data: chartData, loading, error, lastUpdated, refetch } = useWidgetData({
-    apiUrl,
-    apiKey,
-    initialData,
-    processData: (rawData) => processChartData(rawData, fields, title),
-    processDeps: [fields, title]
-  });
+  const [chartData, setChartData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [lastUpdated, setLastUpdated] = useState(null);
+
+  const hasFetchedOnce = useRef(false);
+  const abortControllerRef = useRef(null);
+  
+  const FINAL_API_KEY = useMemo(() => apiKey || process.env.NEXT_PUBLIC_INDIAN_STOCK_API_KEY || '', [apiKey]);
+
+  const fetchData = async (isManual = false) => {
+    if (!apiUrl) return;
+
+    // Abort any ongoing fetch
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      abortControllerRef.current = new AbortController();
+
+      const headers = {};
+      if (FINAL_API_KEY) headers['x-api-key'] = FINAL_API_KEY;
+
+      const response = await fetch(apiUrl, { 
+        headers,
+        signal: abortControllerRef.current.signal
+      });
+
+      if (!response.ok) {
+         if (response.status === 429) throw new Error("Rate Limit Exceeded");
+         throw new Error(`API Error: ${response.status}`);
+      }
+
+      const rawData = await response.json();
+      const processedData = processChartData(rawData, fields, title);
+      
+      setChartData(processedData);
+      setError(null);
+      setLastUpdated(new Date().toLocaleTimeString('en-US', { hour12: false }));
+      hasFetchedOnce.current = true;
+    } catch (err) {
+      if (err.name === 'AbortError') return;
+      console.error("Chart Fetch Error:", err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch data only once on mount, or use cached initialData
+  useEffect(() => {
+    // If we already fetched, don't fetch again
+    if (hasFetchedOnce.current) return;
+
+    if (initialData) {
+      try {
+        const processedData = processChartData(initialData, fields, title);
+        setChartData(processedData);
+        setLastUpdated(new Date().toLocaleTimeString('en-US', { hour12: false }));
+        setLoading(false);
+        hasFetchedOnce.current = true;
+      } catch (err) {
+        console.error("Error processing cached data:", err);
+        setError(err.message);
+        setLoading(false);
+      }
+    } else if (apiUrl) {
+      fetchData(false);
+    }
+
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialData, apiUrl]); // Run when initialData or apiUrl changes, but guard with hasFetchedOnce
 
   const handleManualRefresh = () => {
-    refetch();
+    setError(null);
+    fetchData(true);
     if (onRefresh) onRefresh();
   };
 
