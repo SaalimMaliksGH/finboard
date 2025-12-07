@@ -1,6 +1,6 @@
 # 📊 FinBoard - Dynamic Financial Dashboard
 
-A customizable, real-time financial dashboard built with **Next.js 14**, featuring drag-and-drop widgets, API response caching, and interactive data visualization for Indian stock market data.
+A customizable, real-time financial dashboard built with **Next.js**, featuring drag-and-drop widgets, API response caching, and interactive data visualization for Indian stock market data.
 
 ![Tech Stack](https://img.shields.io/badge/Next.js-14-black) ![React](https://img.shields.io/badge/React-18-blue) ![Zustand](https://img.shields.io/badge/Zustand-4.x-orange) ![Chart.js](https://img.shields.io/badge/Chart.js-4.x-red) ![Tailwind](https://img.shields.io/badge/Tailwind-3.x-cyan)
 
