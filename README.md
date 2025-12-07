@@ -587,23 +587,10 @@ const API_KEY = process.env.NEXT_PUBLIC_API_KEY || '';
 - ✅ Chart gradient rendering
 - ✅ Responsive layout
 
----
-
-## 📈 Performance Metrics
-
-### **Optimization Strategies**
-| Optimization | Impact |
-|--------------|--------|
-| API Response Caching | 50% fewer API calls |
-| Pagination (7 rows) | Reduced DOM nodes by 80%+ |
-| Chart data limiting (50 points) | Smooth 60fps rendering |
-| useMemo for headers | Prevents recalculation on every render |
-| AbortController | No memory leaks from unmounted components |
-| localStorage persistence | Instant dashboard load |
 
 ---
 
-## 🚧 Future Enhancements
+##  Future Enhancements
 
 - [ ] **Widget Editing** - Modify existing widgets without deleting
 - [ ] **Custom Refresh Intervals** - Per-widget auto-refresh settings
@@ -618,25 +605,9 @@ const API_KEY = process.env.NEXT_PUBLIC_API_KEY || '';
 
 ---
 
-## 🤝 Contributing
 
-Contributions are welcome! Please follow these steps:
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit changes (`git commit -m 'Add amazing feature'`)
-4. Push to branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
----
-
-## 📄 License
-
-This project is licensed under the MIT License.
-
----
-
-## 🙏 Acknowledgments
+##  Acknowledgments
 
 - **Indian Stock API** - Real-time stock data provider
 - **Chart.js** - Beautiful chart visualizations
@@ -644,15 +615,3 @@ This project is licensed under the MIT License.
 - **react-dnd** - Drag-and-drop functionality
 - **Tailwind CSS** - Rapid UI development
 
----
-
-## 📞 Contact
-
-**Developer**: [Your Name]  
-**Email**: [your.email@example.com]  
-**Portfolio**: [yourportfolio.com]  
-**LinkedIn**: [linkedin.com/in/yourprofile]
-
----
-
-**Built with ❤️ using Next.js and React**
